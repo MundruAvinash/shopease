@@ -25,3 +25,65 @@ export async function GET() {
     );
   }
 }
+
+//POST FUNCTION
+
+export async function POST(request: Request){
+  try{
+    const body = await request.json();
+
+    const{
+      name,
+      description,
+      price,
+      category,
+      stock,
+      image_url,
+    } = body;
+
+    if(!name || price === undefined || Number(price) <= 0 ){
+      return NextResponse.json(
+        {
+          success: false,
+          message:"Name and a valid price are required",
+        },
+        {status:400}
+      );
+    }
+
+    const [result] = await db.execute(
+         `INSERT INTO products
+         (name, description, price,category, stock, image_url)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+         [
+          name,
+          description ?? null,
+          price,
+          category ?? null,
+          stock ?? 0,
+          image_url ?? null,
+         ]
+    
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Products created successfully",
+        productId:(result as {insertId:number}).insertId,
+      },
+      {status:201}
+    );
+
+  }catch(error){
+    console.error("POST Products Error:", error);
+
+    return NextResponse.json(
+      {
+        success:false,
+        message:"Failed to create product",
+      },
+      {status: 500}
+    );
+  }
+}

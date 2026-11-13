@@ -1,25 +1,24 @@
+
 import { NextResponse } from "next/server";
 import { db } from "@/src/lib/db";
 
 export async function GET() {
-    try{
-        const connection = await db.getConnection();
+  try {
+    await db.query("SELECT 1");
 
-        connection.release();
+    return NextResponse.json({
+      success: true,
+      message: "MySQL database connected successfully!",
+    });
+  } catch (error) {
+    console.error("Database connection error:", error);
 
-        return NextResponse.json({
-            success: true,
-            message:"MySql database connected successfully!",
-        });
-    } catch(error){
-        console.error("Database connection error:", error);
-
-        return NextResponse.json({
-            success: false,
-            message:"MySql database connection failed",
-        },
-    {status: 500}
-);
-    }
-    
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Database connection failed",
+      },
+      { status: 500 }
+    );
+  }
 }
