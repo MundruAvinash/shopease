@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
-import { db } from "@/src/lib/db";
 
-// GET API: Fetch all order items with order and product details
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
+
+// GET: Fetch all order items
 export async function GET() {
   try {
-    // Join order_items with orders and products
     const [orderItems] = await db.execute(`
       SELECT
         oi.id,
@@ -20,18 +21,14 @@ export async function GET() {
       ORDER BY oi.id DESC
     `);
 
-    // Return the order items
     return NextResponse.json({
       success: true,
       message: "Order items fetched successfully",
       data: orderItems,
     });
-
   } catch (error) {
-    // Display the actual error in the terminal
     console.error("GET Order Items Error:", error);
 
-    // Return an error response
     return NextResponse.json(
       {
         success: false,
@@ -42,113 +39,180 @@ export async function GET() {
   }
 }
 
-
-// POST API: Add a product to an existing order
+// POST: Add multiple products to an existing order
 export async function POST(request: Request) {
+  const authError = await requireAdmin();
+
+  if (authError) {
+    return authError;
+  }
+
+  const connection = await db.getConnection();
+
   try {
-    // Read the JSON data sent by Thunder Client
     const body = await request.json();
 
-    // Extract order and product information
-    const { order_id, product_id, quantity } = body;
+    const orderId = Number(body.order_id);
+    const items = body.items;
 
-    // Validate the required values
     if (
-      !Number.isInteger(Number(order_id)) ||
-      Number(order_id) <= 0 ||
-      !Number.isInteger(Number(product_id)) ||
-      Number(product_id) <= 0 ||
-      !Number.isInteger(Number(quantity)) ||
-      Number(quantity) <= 0
+      !Number.isSafeInteger(orderId) ||
+      orderId <= 0 ||
+      !Array.isArray(items) ||
+      items.length === 0
     ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Valid order ID, product ID and quantity are required",
+          message: "Valid order ID and product items are required",
         },
         { status: 400 }
       );
     }
 
-    // Check whether the order and product exist
-    const [orders] = await db.execute(
-      "SELECT id FROM orders WHERE id = ?",
-      [Number(order_id)]
+    const quantities = new Map<number, number>();
+
+    for (const item of items) {
+      const productId = Number(item.product_id);
+      const quantity = Number(item.quantity);
+
+      if (
+        !Number.isSafeInteger(productId) ||
+        productId <= 0 ||
+        !Number.isSafeInteger(quantity) ||
+        quantity <= 0
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Invalid product ID or quantity",
+          },
+          { status: 400 }
+        );
+      }
+
+      quantities.set(
+        productId,
+        (quantities.get(productId) || 0) + quantity
+      );
+    }
+
+    await connection.beginTransaction();
+
+    // Lock and verify the order
+    const [orderRows] = await connection.execute(
+      "SELECT id FROM orders WHERE id = ? FOR UPDATE",
+      [orderId]
     );
 
-    const [products] = await db.execute(
-      "SELECT id, price, stock FROM products WHERE id = ?",
-      [Number(product_id)]
-    );
+    if ((orderRows as object[]).length === 0) {
+      await connection.rollback();
 
-    // Return 404 if the order does not exist
-    if ((orders as object[]).length === 0) {
       return NextResponse.json(
-        { success: false, message: "Order not found" },
+        {
+          success: false,
+          message: "Order not found",
+        },
         { status: 404 }
       );
     }
 
-    // Return 404 if the product does not exist
-    if ((products as object[]).length === 0) {
-      return NextResponse.json(
-        { success: false, message: "Product not found" },
-        { status: 404 }
+    let addedAmount = 0;
+
+    for (const [productId, quantity] of quantities) {
+      // Lock product row
+      const [productRows] = await connection.execute(
+        `SELECT id, name, price, stock
+         FROM products
+         WHERE id = ?
+         FOR UPDATE`,
+        [productId]
+      );
+
+      const products = productRows as {
+        id: number;
+        name: string;
+        price: string;
+        stock: number | null;
+      }[];
+
+      if (products.length === 0) {
+        throw new Error(`Product ID ${productId} not found`);
+      }
+
+      const product = products[0];
+      const availableStock = Number(product.stock ?? 0);
+
+      if (availableStock < quantity) {
+        throw new Error(
+          `Insufficient stock for ${product.name}. Available: ${availableStock}`
+        );
+      }
+
+      addedAmount += Number(product.price) * quantity;
+
+      await connection.execute(
+        `INSERT INTO order_items
+         (order_id, product_id, quantity, price)
+         VALUES (?, ?, ?, ?)`,
+        [orderId, productId, quantity, product.price]
+      );
+
+      await connection.execute(
+        `UPDATE products
+         SET stock = stock - ?
+         WHERE id = ?`,
+        [quantity, productId]
       );
     }
 
-    // Get the product's price and available stock
-    const product = (products as {
-      id: number;
-      price: string;
-      stock: number;
-    }[])[0];
-
-    // Check whether enough stock is available
-    if (product.stock < Number(quantity)) {
-      return NextResponse.json(
-        { success: false, message: "Insufficient product stock" },
-        { status: 400 }
-      );
-    }
-
-    // Save the product in the order_items table
-    const [result] = await db.execute(
-      `INSERT INTO order_items
-       (order_id, product_id, quantity, price)
-       VALUES (?, ?, ?, ?)`,
-      [
-        Number(order_id),
-        Number(product_id),
-        Number(quantity),
-        product.price,
-      ]
+    // Recalculate total from all order items
+    await connection.execute(
+      `UPDATE orders
+       SET total_amount = (
+         SELECT COALESCE(SUM(quantity * price), 0)
+         FROM order_items
+         WHERE order_id = ?
+       )
+       WHERE id = ?`,
+      [orderId, orderId]
     );
 
-    // Get the newly created order item ID
-    const itemId = (result as { insertId: number }).insertId;
+    await connection.commit();
 
-    // Return the success response
     return NextResponse.json(
       {
         success: true,
-        message: "Product added to order successfully",
-        itemId,
+        message: "Products added to order successfully",
+        orderId,
+        addedAmount: addedAmount.toFixed(2),
       },
       { status: 201 }
     );
-
   } catch (error) {
-    // Display the actual error in the terminal
+    await connection.rollback();
+
     console.error("POST Order Items Error:", error);
 
-    // Return an error response
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to add products to order";
+
+    const status =
+      message.includes("not found") ||
+      message.includes("Insufficient stock")
+        ? 400
+        : 500;
+
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to add product to order",
+        message,
       },
-      { status: 500 }
+      { status }
     );
+  } finally {
+    connection.release();
   }
 }
