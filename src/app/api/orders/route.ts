@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
+
 // GET: Admin fetches all orders; customers fetch only their own
 export async function GET() {
   try {
@@ -56,9 +57,11 @@ export async function GET() {
 
 // POST: Create an order for the authenticated customer
 export async function POST(request: Request) {
+    //CRSF protection 
+ 
   // Authenticate before acquiring a database connection
   const user = await getCurrentUser();
-
+  
   if (!user) {
     return NextResponse.json(
       {

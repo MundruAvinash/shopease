@@ -4,6 +4,7 @@ import { revalidateTag } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 
+
 // GET: Fetch all products (public)
 export async function GET() {
   try {
@@ -30,9 +31,17 @@ export async function GET() {
 }
 
 // POST: Create a product (admin only)
+
+// POST: Create a product (admin only)
 export async function POST(request: Request) {
+
+
+  // Step 2: Verify admin authentication
   const authError = await requireAdmin();
-  if (authError) return authError;
+
+  if (authError) {
+    return authError;
+  }
 
   try {
     const body = await request.json();
@@ -70,7 +79,6 @@ export async function POST(request: Request) {
       ]
     );
 
-    // Invalidate cached product data after successful insertion
     revalidateTag("products", "max");
 
     return NextResponse.json(

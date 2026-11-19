@@ -22,7 +22,10 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     const { payload } = await jwtVerify(
       token,
       new TextEncoder().encode(secret),
-      { algorithms: ["HS256"] }
+      { algorithms: ["HS256"], 
+        issuer: "shopease",
+        audience: "shopease-users",
+      }
     );
 
     if (

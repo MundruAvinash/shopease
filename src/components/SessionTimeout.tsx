@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const INACTIVITY_LIMIT = 5 * 60 * 1000; // 10 minutes
+const INACTIVITY_LIMIT = 15 * 60 * 1000; // 10 minutes
 const WARNING_TIME = 60 * 1000; // 1 minute
 const WARNING_AFTER = INACTIVITY_LIMIT - WARNING_TIME;
 

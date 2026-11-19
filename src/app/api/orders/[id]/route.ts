@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 
+
 // GET: Fetch one order
 export async function GET(
   request: Request,
@@ -53,6 +54,7 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  
   const authError = await requireAdmin();
   if (authError) return authError;
 
@@ -144,13 +146,18 @@ export async function PUT(
   }
 }
 
+
+
 // DELETE: Delete order (admin only)
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+ 
   const authError = await requireAdmin();
   if (authError) return authError;
+
+  let connection;
 
   try {
     const { id } = await params;
@@ -163,7 +170,18 @@ export async function DELETE(
       );
     }
 
-    const [result] = await db.execute(
+    connection = await db.getConnection();
+
+    await connection.beginTransaction();
+
+    // Delete child records first
+    await connection.execute(
+      "DELETE FROM order_items WHERE order_id = ?",
+      [orderId]
+    );
+
+    // Delete parent order
+    const [result] = await connection.execute(
       "DELETE FROM orders WHERE id = ?",
       [orderId]
     );
@@ -171,22 +189,34 @@ export async function DELETE(
     const deleteResult = result as { affectedRows: number };
 
     if (deleteResult.affectedRows === 0) {
+      await connection.rollback();
+
       return NextResponse.json(
         { success: false, message: "Order not found" },
         { status: 404 }
       );
     }
 
+    await connection.commit();
+
     return NextResponse.json({
       success: true,
-      message: "Order deleted successfully",
+      message: "Order and related items deleted successfully",
     });
+
   } catch (error) {
+    if (connection) {
+      await connection.rollback();
+    }
+
     console.error("DELETE Order Error:", error);
 
     return NextResponse.json(
       { success: false, message: "Failed to delete order" },
       { status: 500 }
     );
+
+  } finally {
+    connection?.release();
   }
 }

@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
+ 
   try {
     const body = await request.json();
 

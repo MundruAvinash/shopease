@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 
+
 // GET: Fetch all order items
 export async function GET() {
   try {
@@ -41,6 +42,7 @@ export async function GET() {
 
 // POST: Add multiple products to an existing order
 export async function POST(request: Request) {
+
   const authError = await requireAdmin();
 
   if (authError) {
