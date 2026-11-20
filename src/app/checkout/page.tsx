@@ -79,7 +79,6 @@ export default function CheckoutPage() {
           email: formData.email,
           phone: formData.phone,
           address: formData.address,
-
           items: cartItems.map((item) => ({
             product_id: item.id,
             quantity: item.quantity,
@@ -96,7 +95,6 @@ export default function CheckoutPage() {
       }
 
       dispatch(clearCart());
-
       setOrderSuccess(true);
 
       setMessage(
@@ -113,21 +111,24 @@ export default function CheckoutPage() {
     }
   };
 
+  // Empty Cart
   if (cartItems.length === 0 && !orderSuccess) {
     return (
-      <main className="min-h-screen bg-gray-100 p-8">
-        <div className="mx-auto max-w-2xl rounded-xl bg-white p-8 text-center shadow">
+      <main className="min-h-screen bg-gray-100 p-8 text-gray-900 transition-colors duration-300 dark:bg-gray-950 dark:text-white">
+        <div className="mx-auto max-w-2xl rounded-xl border border-gray-200 bg-white p-8 text-center shadow dark:border-gray-800 dark:bg-gray-900">
+          <div className="mb-4 text-6xl">🛒</div>
+
           <h1 className="text-3xl font-bold">
             Your Cart is Empty
           </h1>
 
-          <p className="mt-3 text-gray-600">
+          <p className="mt-3 text-gray-600 dark:text-gray-400">
             Add products before proceeding to checkout.
           </p>
 
           <Link
             href="/products"
-            className="mt-6 inline-block rounded-lg bg-blue-600 px-6 py-3 text-white"
+            className="mt-6 inline-block rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
           >
             Continue Shopping
           </Link>
@@ -136,35 +137,36 @@ export default function CheckoutPage() {
     );
   }
 
+  // Order Success
   if (orderSuccess) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-100 p-6">
-        <div className="w-full max-w-lg rounded-xl bg-white p-8 text-center shadow">
+      <main className="flex min-h-screen items-center justify-center bg-gray-100 p-6 text-gray-900 transition-colors duration-300 dark:bg-gray-950 dark:text-white">
+        <div className="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-8 text-center shadow dark:border-gray-800 dark:bg-gray-900">
           <div className="mb-4 text-6xl">✅</div>
 
-          <h1 className="text-3xl font-bold text-green-600">
+          <h1 className="text-3xl font-bold text-green-600 dark:text-green-400">
             Order Placed Successfully!
           </h1>
 
-          <p className="mt-4 text-gray-600">
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
             Thank you for shopping with ShopEase.
           </p>
 
-          <p className="mt-4 rounded-lg bg-green-50 p-4 font-semibold text-green-700">
+          <p className="mt-4 rounded-lg bg-green-50 p-4 font-semibold text-green-700 dark:bg-green-950 dark:text-green-300">
             {message}
           </p>
 
           <div className="mt-6 flex flex-col gap-3">
             <Link
               href="/orders"
-              className="rounded-lg bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
+              className="rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700"
             >
               View My Orders
             </Link>
 
             <Link
               href="/products"
-              className="rounded-lg border border-gray-300 py-3 font-semibold text-gray-700 hover:bg-gray-100"
+              className="rounded-lg border border-gray-300 py-3 font-semibold text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
             >
               Continue Shopping
             </Link>
@@ -175,34 +177,39 @@ export default function CheckoutPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-100 px-6 py-10">
+    <main className="min-h-screen bg-gray-100 px-6 py-10 text-gray-900 transition-colors duration-300 dark:bg-gray-950 dark:text-white">
       <div className="mx-auto max-w-6xl">
-        <h1 className="mb-8 text-3xl font-bold text-gray-800">
+
+        {/* Page Heading */}
+        <h1 className="mb-8 text-3xl font-bold text-gray-800 dark:text-white">
           Checkout
         </h1>
 
         <div className="grid gap-8 md:grid-cols-2">
-          <section className="h-fit rounded-xl bg-white p-6 shadow">
-            <h2 className="mb-6 text-2xl font-bold">
+
+          {/* Order Summary */}
+          <section className="h-fit rounded-xl border border-gray-200 bg-white p-6 shadow dark:border-gray-800 dark:bg-gray-900">
+
+            <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">
               Order Summary
             </h2>
 
             {cartItems.map((item) => (
               <div
                 key={item.id}
-                className="flex justify-between gap-4 border-b py-4"
+                className="flex justify-between gap-4 border-b border-gray-200 py-4 dark:border-gray-700"
               >
                 <div>
-                  <h3 className="font-semibold">
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
                     {item.name}
                   </h3>
 
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     Quantity: {item.quantity}
                   </p>
                 </div>
 
-                <p className="font-semibold">
+                <p className="font-semibold text-gray-900 dark:text-white">
                   ₹{(
                     item.price * item.quantity
                   ).toLocaleString("en-IN")}
@@ -210,32 +217,34 @@ export default function CheckoutPage() {
               </div>
             ))}
 
-            <div className="mt-6 flex justify-between">
+            <div className="mt-6 flex justify-between text-gray-700 dark:text-gray-300">
               <span>Total Items</span>
               <span>{totalItems}</span>
             </div>
 
-            <div className="mt-4 flex justify-between text-xl font-bold text-blue-600">
+            <div className="mt-4 flex justify-between text-xl font-bold text-blue-600 dark:text-blue-400">
               <span>Estimated Total</span>
               <span>
                 ₹{totalPrice.toLocaleString("en-IN")}
               </span>
             </div>
 
-            <p className="mt-2 text-xs text-gray-500">
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
               Final amount is calculated using database prices.
             </p>
 
             <Link
               href="/cart"
-              className="mt-6 inline-block text-blue-600 hover:underline"
+              className="mt-6 inline-block font-medium text-blue-600 hover:underline dark:text-blue-400"
             >
               ← Back to Cart
             </Link>
           </section>
 
-          <section className="rounded-xl bg-white p-6 shadow">
-            <h2 className="mb-6 text-2xl font-bold">
+          {/* Delivery Information */}
+          <section className="rounded-xl border border-gray-200 bg-white p-6 shadow dark:border-gray-800 dark:bg-gray-900">
+
+            <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">
               Delivery Information
             </h2>
 
@@ -243,8 +252,10 @@ export default function CheckoutPage() {
               onSubmit={handleSubmit}
               className="space-y-5"
             >
+
+              {/* Full Name */}
               <div>
-                <label className="mb-2 block font-medium">
+                <label className="mb-2 block font-medium text-gray-800 dark:text-gray-200">
                   Full Name
                 </label>
 
@@ -255,12 +266,13 @@ export default function CheckoutPage() {
                   onChange={handleChange}
                   placeholder="Enter your full name"
                   required
-                  className="w-full rounded-lg border border-gray-300 p-3 outline-none focus:border-blue-500"
+                  className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500"
                 />
               </div>
 
+              {/* Email */}
               <div>
-                <label className="mb-2 block font-medium">
+                <label className="mb-2 block font-medium text-gray-800 dark:text-gray-200">
                   Email Address
                 </label>
 
@@ -271,12 +283,13 @@ export default function CheckoutPage() {
                   onChange={handleChange}
                   placeholder="Enter your email"
                   required
-                  className="w-full rounded-lg border border-gray-300 p-3 outline-none focus:border-blue-500"
+                  className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500"
                 />
               </div>
 
+              {/* Phone */}
               <div>
-                <label className="mb-2 block font-medium">
+                <label className="mb-2 block font-medium text-gray-800 dark:text-gray-200">
                   Phone Number
                 </label>
 
@@ -289,12 +302,13 @@ export default function CheckoutPage() {
                   required
                   pattern="[0-9]{10}"
                   title="Enter a 10-digit phone number"
-                  className="w-full rounded-lg border border-gray-300 p-3 outline-none focus:border-blue-500"
+                  className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500"
                 />
               </div>
 
+              {/* Delivery Address */}
               <div>
-                <label className="mb-2 block font-medium">
+                <label className="mb-2 block font-medium text-gray-800 dark:text-gray-200">
                   Delivery Address
                 </label>
 
@@ -305,25 +319,32 @@ export default function CheckoutPage() {
                   placeholder="Enter your complete delivery address"
                   rows={4}
                   required
-                  className="w-full rounded-lg border border-gray-300 p-3 outline-none focus:border-blue-500"
+                  className="w-full rounded-lg border border-gray-300 bg-white p-3 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500"
                 />
               </div>
 
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+                className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
               >
                 {isLoading ? "Placing Order..." : "Place Order"}
               </button>
 
+              {/* Error Message */}
               {message && (
-                <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                <p
+                  role="alert"
+                  className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+                >
                   {message}
                 </p>
               )}
+
             </form>
           </section>
+
         </div>
       </div>
     </main>

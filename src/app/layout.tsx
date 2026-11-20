@@ -4,6 +4,8 @@ import "./globals.css";
 import Providers from "@/src/components/Providers";
 import Navbar from "@/src/components/Navbar";
 import SessionTimeout from "@/src/components/SessionTimeout";
+import ThemeProvider from "../components/ThemeProvider";
+import Footer from "../components/Footer";
 
 export const metadata: Metadata = {
   title: "ShopEase",
@@ -18,11 +20,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Providers>
+        <ThemeProvider>
+          <Providers>
           <SessionTimeout />
           <Navbar />
           {children}
+          <Footer />
         </Providers>
+        </ThemeProvider>
       </body>
     </html>
   );

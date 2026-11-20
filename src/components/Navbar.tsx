@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/lib/store";
+import { useTheme } from "@/src/components/ThemeProvider";
 
 interface User {
   id: number;
@@ -18,6 +19,7 @@ const LOGOUT_EVENT_KEY = "shopease_logout_event";
 
 export default function Navbar() {
   const router = useRouter();
+  const { theme, toggleTheme } = useTheme();
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,7 +57,6 @@ export default function Navbar() {
 
     void fetchUser();
 
-    // Synchronize logout from other tabs
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === LOGOUT_EVENT_KEY && event.newValue) {
         setUser(null);
@@ -79,7 +80,6 @@ export default function Navbar() {
       if (response.ok) {
         setUser(null);
 
-        // Notify other tabs
         localStorage.setItem(
           LOGOUT_EVENT_KEY,
           JSON.stringify({
@@ -97,17 +97,26 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="flex items-center justify-between bg-white px-8 py-4 shadow">
-      <Link href="/" className="text-2xl font-bold text-blue-600">
+    <nav className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 bg-white px-8 py-4 text-gray-900 shadow-sm transition-colors duration-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+      <Link
+        href="/"
+        className="text-2xl font-bold text-blue-600"
+      >
         ShopEase
       </Link>
 
-      <div className="flex items-center gap-6 font-medium">
-        <Link href="/" className="hover:text-blue-600">
+      <div className="flex flex-wrap items-center gap-6 font-medium">
+        <Link
+          href="/"
+          className="transition hover:text-blue-600"
+        >
           Home
         </Link>
 
-        <Link href="/products" className="hover:text-blue-600">
+        <Link
+          href="/products"
+          className="transition hover:text-blue-600"
+        >
           Products
         </Link>
 
@@ -129,7 +138,7 @@ export default function Navbar() {
 
             <button
               onClick={handleLogout}
-              className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+              className="rounded-lg bg-red-600 px-4 py-2 text-white transition hover:bg-red-700"
             >
               Logout
             </button>
@@ -144,7 +153,7 @@ export default function Navbar() {
 
             <Link
               href="/register"
-              className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
             >
               Register
             </Link>
@@ -153,10 +162,19 @@ export default function Navbar() {
 
         <Link
           href="/cart"
-          className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
         >
           Cart ({cartCount})
         </Link>
+
+        {/* Theme Toggle */}
+        <button
+          onClick={toggleTheme}
+          aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+          className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-800"
+        >
+          {theme === "light" ? "🌙 Dark Mode" : "☀️ Light Mode"}
+        </button>
       </div>
     </nav>
   );

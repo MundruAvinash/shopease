@@ -33,28 +33,32 @@ export default function CartPage() {
   );
 
   return (
-    <main className="min-h-screen bg-gray-100 px-6 py-10">
+    <main className="min-h-screen bg-gray-100 px-6 py-10 text-gray-900 transition-colors duration-300 dark:bg-gray-950 dark:text-white">
       <div className="mx-auto max-w-7xl">
 
-        <h1 className="mb-8 text-3xl font-bold text-gray-800">
+        {/* Page Heading */}
+        <h1 className="mb-8 text-3xl font-bold text-gray-800 dark:text-white">
           Shopping Cart
         </h1>
 
         {cartItems.length === 0 ? (
 
           // Empty Cart
-          <div className="rounded-xl bg-white p-10 text-center shadow">
-            <h2 className="text-2xl font-bold">
+          <div className="rounded-xl border border-gray-200 bg-white p-10 text-center shadow dark:border-gray-800 dark:bg-gray-900">
+
+            <div className="mb-4 text-6xl">🛒</div>
+
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
               Your Cart is Empty
             </h2>
 
-            <p className="mt-3 text-gray-500">
+            <p className="mt-3 text-gray-500 dark:text-gray-400">
               Add some products to start shopping.
             </p>
 
             <Link
               href="/products"
-              className="mt-6 inline-block rounded-lg bg-blue-600 px-6 py-3 text-white hover:bg-blue-700"
+              className="mt-6 inline-block rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
             >
               Continue Shopping
             </Link>
@@ -72,16 +76,16 @@ export default function CartPage() {
 
                 <div
                   key={item.id}
-                  className="flex flex-wrap items-center justify-between gap-5 rounded-xl bg-white p-6 shadow"
+                  className="flex flex-wrap items-center justify-between gap-5 rounded-xl border border-gray-200 bg-white p-6 shadow transition-colors duration-300 dark:border-gray-800 dark:bg-gray-900"
                 >
 
                   {/* Product Details */}
                   <div>
-                    <h2 className="text-xl font-bold text-gray-800">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">
                       {item.name}
                     </h2>
 
-                    <p className="mt-2 text-blue-600">
+                    <p className="mt-2 font-medium text-blue-600 dark:text-blue-400">
                       ₹{item.price.toLocaleString("en-IN")}
                     </p>
                   </div>
@@ -94,12 +98,13 @@ export default function CartPage() {
                         dispatch(decreaseQuantity(item.id))
                       }
                       disabled={item.quantity <= 1}
-                      className="rounded bg-gray-200 px-4 py-2 disabled:opacity-40"
+                      aria-label={`Decrease quantity of ${item.name}`}
+                      className="rounded-lg bg-gray-200 px-4 py-2 text-gray-900 transition hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
                     >
                       -
                     </button>
 
-                    <span className="font-semibold">
+                    <span className="min-w-6 text-center font-semibold text-gray-900 dark:text-white">
                       {item.quantity}
                     </span>
 
@@ -107,7 +112,8 @@ export default function CartPage() {
                       onClick={() =>
                         dispatch(increaseQuantity(item.id))
                       }
-                      className="rounded bg-gray-200 px-4 py-2"
+                      aria-label={`Increase quantity of ${item.name}`}
+                      className="rounded-lg bg-gray-200 px-4 py-2 text-gray-900 transition hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
                     >
                       +
                     </button>
@@ -115,7 +121,7 @@ export default function CartPage() {
                   </div>
 
                   {/* Subtotal */}
-                  <p className="font-bold">
+                  <p className="font-bold text-gray-900 dark:text-white">
                     ₹{(
                       item.price * item.quantity
                     ).toLocaleString("en-IN")}
@@ -126,7 +132,7 @@ export default function CartPage() {
                     onClick={() =>
                       dispatch(removeFromCart(item.id))
                     }
-                    className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+                    className="rounded-lg bg-red-600 px-4 py-2 font-medium text-white transition hover:bg-red-700"
                   >
                     Remove
                   </button>
@@ -138,18 +144,20 @@ export default function CartPage() {
             </section>
 
             {/* Order Summary */}
-            <section className="h-fit rounded-xl bg-white p-6 shadow">
+            <section className="h-fit rounded-xl border border-gray-200 bg-white p-6 shadow transition-colors duration-300 dark:border-gray-800 dark:bg-gray-900">
 
-              <h2 className="mb-6 text-2xl font-bold">
+              <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">
                 Order Summary
               </h2>
 
-              <div className="flex justify-between">
+              <div className="flex justify-between text-gray-600 dark:text-gray-300">
                 <span>Total Items</span>
-                <span>{totalItems}</span>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {totalItems}
+                </span>
               </div>
 
-              <div className="mt-4 flex justify-between text-xl font-bold text-blue-600">
+              <div className="mt-4 flex justify-between text-xl font-bold text-blue-600 dark:text-blue-400">
                 <span>Total Price</span>
                 <span>
                   ₹{totalPrice.toLocaleString("en-IN")}
@@ -158,14 +166,14 @@ export default function CartPage() {
 
               <Link
                 href="/checkout"
-                className="mt-8 block rounded-lg bg-blue-600 py-3 text-center font-semibold text-white hover:bg-blue-700"
+                className="mt-8 block rounded-lg bg-blue-600 py-3 text-center font-semibold text-white transition hover:bg-blue-700"
               >
                 Proceed to Checkout
               </Link>
 
               <Link
                 href="/products"
-                className="mt-4 block text-center text-blue-600 hover:underline"
+                className="mt-4 block text-center font-medium text-blue-600 hover:underline dark:text-blue-400"
               >
                 Continue Shopping
               </Link>

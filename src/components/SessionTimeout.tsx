@@ -3,12 +3,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const INACTIVITY_LIMIT = 15 * 60 * 1000; // 10 minutes
-const WARNING_TIME = 60 * 1000; // 1 minute
+const INACTIVITY_LIMIT = 10 * 60 * 1000; // 2 minutes
+const WARNING_TIME = 60 * 1000; // 1 minute warning
 const WARNING_AFTER = INACTIVITY_LIMIT - WARNING_TIME;
 
 const LOGOUT_EVENT_KEY = "shopease_logout_event";
 const ACTIVITY_EVENT_KEY = "shopease_activity_event";
+const USER_ACTIVE_EVENT = "shopease-user-active";
 
 export default function SessionTimeout() {
   const [showWarning, setShowWarning] = useState(false);
@@ -23,6 +24,7 @@ export default function SessionTimeout() {
     let isAuthenticated = false;
     let lastBroadcastTime = 0;
 
+    // Clear all timers
     const clearTimers = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       if (countdownRef.current) clearInterval(countdownRef.current);
@@ -31,225 +33,170 @@ export default function SessionTimeout() {
       countdownRef.current = null;
     };
 
-    const broadcastLogout = (reason: "inactive" | "manual") => {
+    // Notify other tabs about logout
+    const broadcastLogout = () => {
       localStorage.setItem(
         LOGOUT_EVENT_KEY,
-        JSON.stringify({ reason, timestamp: Date.now() })
+        JSON.stringify({ reason: "inactive", timestamp: Date.now() })
       );
     };
 
+    // Logout user and redirect to login
     const logout = async () => {
       if (logoutStartedRef.current) return;
 
       logoutStartedRef.current = true;
       clearTimers();
       setShowWarning(false);
-
-      broadcastLogout("inactive");
+      broadcastLogout();
 
       try {
-        await fetch("/api/auth/logout", { method: "POST" });
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "include",
+        });
       } catch (error) {
-        console.error("Automatic logout failed:", error);
+        console.error("Logout failed:", error);
       } finally {
         window.location.replace("/login?reason=inactive");
       }
     };
 
+    // Display warning and start 60-second countdown
     const startWarning = () => {
-      if (logoutStartedRef.current || countdownRef.current) return;
+      if (countdownRef.current || logoutStartedRef.current) return;
 
       setShowWarning(true);
-      setRemainingSeconds(60);
-
       const deadline = Date.now() + WARNING_TIME;
 
       countdownRef.current = setInterval(() => {
-        const secondsLeft = Math.max(
+        const seconds = Math.max(
           0,
           Math.ceil((deadline - Date.now()) / 1000)
         );
 
-        setRemainingSeconds(secondsLeft);
+        setRemainingSeconds(seconds);
 
-        if (secondsLeft <= 0) {
-          if (countdownRef.current) {
-            clearInterval(countdownRef.current);
-            countdownRef.current = null;
-          }
-
+        if (seconds <= 0) {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          countdownRef.current = null;
           void logout();
         }
       }, 1000);
     };
 
+    // Check whether the inactivity limit has been reached
     const checkInactivity = () => {
-      if (
-        !isAuthenticated ||
-        logoutStartedRef.current ||
-        lastActivityRef.current === null
-      ) {
-        return;
-      }
+      if (!isAuthenticated || logoutStartedRef.current) return;
+      if (lastActivityRef.current === null) return;
 
       const inactiveTime = Date.now() - lastActivityRef.current;
       const remainingTime = INACTIVITY_LIMIT - inactiveTime;
 
       if (remainingTime <= 0) {
         void logout();
-        return;
-      }
-
-      if (remainingTime <= WARNING_TIME) {
-        if (timerRef.current) {
-          clearTimeout(timerRef.current);
-          timerRef.current = null;
-        }
-
+      } else if (remainingTime <= WARNING_TIME) {
         startWarning();
-        return;
+      } else {
+        timerRef.current = setTimeout(
+          checkInactivity,
+          remainingTime - WARNING_TIME
+        );
       }
-
-      if (timerRef.current) clearTimeout(timerRef.current);
-
-      timerRef.current = setTimeout(
-        checkInactivity,
-        remainingTime - WARNING_TIME
-      );
     };
 
+    // Reset inactivity timer whenever the user is active
     const resetTimer = (broadcast = true) => {
       if (!isAuthenticated || logoutStartedRef.current) return;
 
       lastActivityRef.current = Date.now();
-
-      if (timerRef.current) clearTimeout(timerRef.current);
-      if (countdownRef.current) clearInterval(countdownRef.current);
-
-      timerRef.current = null;
-      countdownRef.current = null;
+      clearTimers();
 
       setShowWarning(false);
       setRemainingSeconds(60);
 
-      timerRef.current = setTimeout(
-        checkInactivity,
-        WARNING_AFTER
-      );
+      timerRef.current = setTimeout(checkInactivity, WARNING_AFTER);
 
-      if (broadcast) {
-        const now = Date.now();
-
-        if (now - lastBroadcastTime >= 1000) {
-          lastBroadcastTime = now;
-
-          localStorage.setItem(
-            ACTIVITY_EVENT_KEY,
-            String(now)
-          );
-        }
+      // Synchronize activity with other tabs
+      if (broadcast && Date.now() - lastBroadcastTime >= 1000) {
+        lastBroadcastTime = Date.now();
+        localStorage.setItem(ACTIVITY_EVENT_KEY, String(Date.now()));
       }
     };
 
+
+
+    // Handle Stay Logged In button
+    const handleUserActive = () => resetTimer();
+
+    // Synchronize logout and activity across browser tabs
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === LOGOUT_EVENT_KEY && event.newValue) {
-        let reason: "inactive" | "manual" = "manual";
-
-        try {
-          const data = JSON.parse(event.newValue);
-          reason = data.reason === "inactive" ? "inactive" : "manual";
-        } catch {
-          // Use manual logout as fallback
-        }
-
         logoutStartedRef.current = true;
         clearTimers();
-
-        window.location.replace(
-          reason === "inactive" ? "/login?reason=inactive" : "/login"
-        );
+        window.location.replace("/login?reason=inactive");
       }
 
-      if (
-        event.key === ACTIVITY_EVENT_KEY &&
-        event.newValue &&
-        isAuthenticated
-      ) {
+      if (event.key === ACTIVITY_EVENT_KEY && event.newValue && isAuthenticated) {
         const activityTime = Number(event.newValue);
 
         if (
           Number.isFinite(activityTime) &&
-          (lastActivityRef.current === null ||
-            activityTime > lastActivityRef.current)
+          activityTime > (lastActivityRef.current ?? 0)
         ) {
           resetTimer(false);
         }
       }
     };
 
+    // Recheck inactivity when the user returns to the tab
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        checkInactivity();
-      }
+      if (document.visibilityState === "visible") checkInactivity();
     };
 
+    // Verify authentication before starting the timer
     const initialize = async () => {
       try {
         const response = await fetch("/api/auth/me", {
           cache: "no-store",
+          credentials: "include",
         });
 
         if (!response.ok) return;
 
         const result = await response.json();
-
         if (!result.success) return;
 
         isAuthenticated = true;
         lastActivityRef.current = Date.now();
-
         resetTimer();
       } catch (error) {
         console.error("Session check failed:", error);
       }
     };
 
-    const activityEvents = [
-      "mousemove",
-      "mousedown",
-      "keydown",
-      "scroll",
-      "touchstart",
-      "click",
-    ];
+    
 
-    activityEvents.forEach((event) => {
-      window.addEventListener(event, () => resetTimer());
-    });
 
+    window.addEventListener(USER_ACTIVE_EVENT, handleUserActive);
     window.addEventListener("storage", handleStorageChange);
-
-    document.addEventListener(
-      "visibilitychange",
-      handleVisibilityChange
-    );
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     void initialize();
 
+    // Remove timers and event listeners when component unmounts
     return () => {
       clearTimers();
-      window.removeEventListener("storage", handleStorageChange);
 
-      document.removeEventListener(
-        "visibilitychange",
-        handleVisibilityChange
-      );
+      window.removeEventListener(USER_ACTIVE_EVENT, handleUserActive);
+      window.removeEventListener("storage", handleStorageChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
+  // Reset timer when user clicks Stay Logged In
   const stayLoggedIn = useCallback(() => {
-    // User activity resets the inactivity timer.
-    window.dispatchEvent(new Event("shopease-user-active"));
+    window.dispatchEvent(new Event(USER_ACTIVE_EVENT));
   }, []);
 
   return (
@@ -276,8 +223,7 @@ export default function SessionTimeout() {
             </h2>
 
             <p className="mb-4 text-center text-gray-600">
-              You have been inactive. Your ShopEase session will
-              expire soon.
+              You have been inactive. Your ShopEase session will expire soon.
             </p>
 
             <p className="mb-6 text-center text-lg font-semibold text-red-600">
