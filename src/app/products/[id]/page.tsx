@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
@@ -16,6 +15,7 @@ interface Product {
   category: string;
   stock: number;
   image_url: string;
+  images?: string[];
   created_at?: string;
 }
 
@@ -24,11 +24,22 @@ function getImageUrl(imageUrl: string | undefined) {
     return "/images/no-image.png";
   }
 
-  if(imageUrl.startsWith("http") || imageUrl.startsWith("/")){
+  if (imageUrl.startsWith("http") || imageUrl.startsWith("/")) {
     return imageUrl;
   }
 
   return `/images/${imageUrl}`;
+}
+
+function getProductImages(product: Product): string[] {
+  const images = product.images?.filter(Boolean) ?? [];
+
+  if (images.length > 0) {
+    return images;
+  }
+
+  // Fallback for products that have only one image.
+  return product.image_url ? [product.image_url] : [];
 }
 
 function ProductDetailsContent() {
@@ -40,6 +51,7 @@ function ProductDetailsContent() {
 
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [selectedImage, setSelectedImage] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -66,7 +78,15 @@ function ProductDetailsContent() {
         }
 
         const selectedProduct: Product = productResult.data;
+
         setProduct(selectedProduct);
+
+        // Select the first image when the product loads.
+        const productImages = getProductImages(selectedProduct);
+
+        setSelectedImage(
+          productImages[0] || selectedProduct.image_url || ""
+        );
 
         // Fetch all products for related products
         const allProductsResponse = await fetch("/api/products", {
@@ -116,7 +136,7 @@ function ProductDetailsContent() {
   };
 
   const handleBuyNow = () => {
-    if (!product) return;
+    if (!product || product.stock <= 0) return;
 
     handleAddToCart();
     router.push("/checkout");
@@ -149,6 +169,8 @@ function ProductDetailsContent() {
     );
   }
 
+  const productImages = getProductImages(product);
+
   return (
     <main className="min-h-screen bg-gray-100 px-4 py-8 text-gray-900 transition-colors dark:bg-gray-950 dark:text-white">
       <div className="mx-auto max-w-7xl">
@@ -171,15 +193,48 @@ function ProductDetailsContent() {
         {/* Product Details */}
         <section className="grid grid-cols-1 gap-10 rounded-2xl bg-white p-6 shadow-lg dark:bg-gray-900 md:grid-cols-2 md:p-10">
 
-          {/* Product Image */}
-          <div className="flex items-center justify-center overflow-hidden rounded-xl bg-gray-100 p-4 dark:bg-gray-800">
-            <div className="group h-[350px] w-full overflow-hidden rounded-lg md:h-[500px]">
-              <img
-                src={getImageUrl(product.image_url)}
-                alt={product.name}
-                className="h-full w-full object-contain transition-transform duration-500 ease-in-out group-hover:scale-150"
-              />
+          {/* Product Image Gallery */}
+          <div className="flex flex-col gap-4">
+
+            {/* Main Image */}
+            <div className="flex h-[350px] items-center justify-center overflow-hidden rounded-xl bg-gray-100 p-4 dark:bg-gray-800 md:h-[500px]">
+              <div className="group h-full w-full overflow-hidden rounded-lg">
+                <img
+                  src={getImageUrl(
+                    selectedImage || product.image_url
+                  )}
+                  alt={product.name}
+                  className="h-full w-full object-contain transition-transform duration-500 ease-in-out group-hover:scale-125"
+                />
+              </div>
             </div>
+
+            {/* Image Thumbnails */}
+            {productImages.length > 1 && (
+              <div className="flex flex-wrap gap-3">
+                {productImages.map((image, index) => (
+                  <button
+                    key={`${image}-${index}`}
+                    type="button"
+                    onClick={() => setSelectedImage(image)}
+                    className={`h-20 w-20 overflow-hidden rounded-lg border-2 bg-gray-100 p-2 transition dark:bg-gray-800 ${
+                      selectedImage === image
+                        ? "border-blue-600"
+                        : "border-transparent hover:border-gray-400"
+                    }`}
+                    aria-label={`View product image ${index + 1}`}
+                    aria-pressed={selectedImage === image}
+                  >
+                    <img
+                      src={getImageUrl(image)}
+                      alt={`${product.name} image ${index + 1}`}
+                      className="h-full w-full object-contain"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+
           </div>
 
           {/* Product Information */}
@@ -197,12 +252,14 @@ function ProductDetailsContent() {
               {product.description}
             </p>
 
+            {/* Product Price */}
             <div className="mb-5">
               <span className="text-3xl font-bold text-green-600 dark:text-green-400">
                 ₹{Number(product.price).toLocaleString("en-IN")}
               </span>
             </div>
 
+            {/* Stock Availability */}
             <p className="mb-6 text-sm">
               Availability:{" "}
               {product.stock > 0 ? (
@@ -227,7 +284,13 @@ function ProductDetailsContent() {
                 Add to Cart
               </button>
 
-             
+              <button
+                onClick={handleBuyNow}
+                disabled={product.stock <= 0}
+                className="rounded-lg bg-blue-600 px-8 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Buy Now
+              </button>
 
             </div>
 

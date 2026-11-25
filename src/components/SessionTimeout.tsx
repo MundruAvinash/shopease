@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const INACTIVITY_LIMIT = 10 * 60 * 1000; // 2 minutes
+const INACTIVITY_LIMIT = 3 * 60 * 1000; // 3 minutes
 const WARNING_TIME = 60 * 1000; // 1 minute warning
 const WARNING_AFTER = INACTIVITY_LIMIT - WARNING_TIME;
 
@@ -37,11 +36,14 @@ export default function SessionTimeout() {
     const broadcastLogout = () => {
       localStorage.setItem(
         LOGOUT_EVENT_KEY,
-        JSON.stringify({ reason: "inactive", timestamp: Date.now() })
+        JSON.stringify({
+          reason: "inactive",
+          timestamp: Date.now(),
+        })
       );
     };
 
-    // Logout user and redirect to login
+    // Logout regular user and redirect to login
     const logout = async () => {
       if (logoutStartedRef.current) return;
 
@@ -67,6 +69,7 @@ export default function SessionTimeout() {
       if (countdownRef.current || logoutStartedRef.current) return;
 
       setShowWarning(true);
+
       const deadline = Date.now() + WARNING_TIME;
 
       countdownRef.current = setInterval(() => {
@@ -78,7 +81,10 @@ export default function SessionTimeout() {
         setRemainingSeconds(seconds);
 
         if (seconds <= 0) {
-          if (countdownRef.current) clearInterval(countdownRef.current);
+          if (countdownRef.current) {
+            clearInterval(countdownRef.current);
+          }
+
           countdownRef.current = null;
           void logout();
         }
@@ -120,24 +126,35 @@ export default function SessionTimeout() {
       // Synchronize activity with other tabs
       if (broadcast && Date.now() - lastBroadcastTime >= 1000) {
         lastBroadcastTime = Date.now();
-        localStorage.setItem(ACTIVITY_EVENT_KEY, String(Date.now()));
+
+        localStorage.setItem(
+          ACTIVITY_EVENT_KEY,
+          String(Date.now())
+        );
       }
     };
-
-
 
     // Handle Stay Logged In button
     const handleUserActive = () => resetTimer();
 
     // Synchronize logout and activity across browser tabs
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === LOGOUT_EVENT_KEY && event.newValue) {
+      // Only regular-user tabs should react to inactivity logout events
+      if (
+        event.key === LOGOUT_EVENT_KEY &&
+        event.newValue &&
+        isAuthenticated
+      ) {
         logoutStartedRef.current = true;
         clearTimers();
         window.location.replace("/login?reason=inactive");
       }
 
-      if (event.key === ACTIVITY_EVENT_KEY && event.newValue && isAuthenticated) {
+      if (
+        event.key === ACTIVITY_EVENT_KEY &&
+        event.newValue &&
+        isAuthenticated
+      ) {
         const activityTime = Number(event.newValue);
 
         if (
@@ -151,10 +168,12 @@ export default function SessionTimeout() {
 
     // Recheck inactivity when the user returns to the tab
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") checkInactivity();
+      if (document.visibilityState === "visible") {
+        checkInactivity();
+      }
     };
 
-    // Verify authentication before starting the timer
+    // Verify authentication and role before starting the timer
     const initialize = async () => {
       try {
         const response = await fetch("/api/auth/me", {
@@ -165,22 +184,33 @@ export default function SessionTimeout() {
         if (!response.ok) return;
 
         const result = await response.json();
+
         if (!result.success) return;
 
+        // Support either result.user.role or result.role
+        const role = result.user?.role ?? result.role;
+
+        // Admins do not receive the inactivity timeout
+        if (role !== "user") {
+          return;
+        }
+
+        // Start timeout only for authenticated regular users
         isAuthenticated = true;
         lastActivityRef.current = Date.now();
+
         resetTimer();
       } catch (error) {
         console.error("Session check failed:", error);
       }
     };
 
-    
-
-
     window.addEventListener(USER_ACTIVE_EVENT, handleUserActive);
     window.addEventListener("storage", handleStorageChange);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
 
     void initialize();
 
@@ -190,7 +220,10 @@ export default function SessionTimeout() {
 
       window.removeEventListener(USER_ACTIVE_EVENT, handleUserActive);
       window.removeEventListener("storage", handleStorageChange);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
+      );
     };
   }, []);
 

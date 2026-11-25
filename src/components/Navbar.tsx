@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/lib/store";
-import { useTheme } from "@/src/components/ThemeProvider";
 
 interface User {
   id: number;
@@ -19,7 +17,6 @@ const LOGOUT_EVENT_KEY = "shopease_logout_event";
 
 export default function Navbar() {
   const router = useRouter();
-  const { theme, toggleTheme } = useTheme();
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -166,15 +163,6 @@ export default function Navbar() {
         >
           Cart ({cartCount})
         </Link>
-
-        {/* Theme Toggle */}
-        <button
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-          className="rounded-lg border border-gray-300 px-4 py-2 transition hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-800"
-        >
-          {theme === "light" ? "🌙 Dark Mode" : "☀️ Light Mode"}
-        </button>
       </div>
     </nav>
   );
