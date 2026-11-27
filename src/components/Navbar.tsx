@@ -10,7 +10,7 @@ interface User {
   id: number;
   name: string;
   email: string;
-  role: "user" | "admin";
+  role: "user" | "admin" | "owner_admin" | "employee_admin";
 }
 
 const LOGOUT_EVENT_KEY = "shopease_logout_event";
@@ -123,11 +123,11 @@ export default function Navbar() {
               Orders
             </Link>
 
-            {user.role === "admin" && (
-              <Link href="/admin" className="hover:text-blue-600">
+            {["admin", "owner_admin", "employee_admin"].includes(user.role) && (
+                <Link href="/admin" className="hover:text-blue-600">
                 Admin
               </Link>
-            )}
+             )}
 
             <Link href="/profile" className="hover:text-blue-600">
               Profile

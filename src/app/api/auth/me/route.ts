@@ -29,7 +29,7 @@ export async function GET() {
       id: number;
       name: string;
       email: string;
-      role: "user" | "admin";
+      role: "user" | "admin" | "Owner_admin" | "employee_admin";
       created_at: Date;
     }[];
 

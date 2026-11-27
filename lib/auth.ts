@@ -1,13 +1,18 @@
-
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { db } from "./db";
 
+export type UserRole =
+  | "user"
+  | "admin"
+  | "owner_admin"
+  | "employee_admin";
+
 export interface AuthUser {
   userId: number;
   email: string;
-  role: "user" | "admin";
+  role: UserRole;
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
@@ -22,7 +27,8 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     const { payload } = await jwtVerify(
       token,
       new TextEncoder().encode(secret),
-      { algorithms: ["HS256"], 
+      {
+        algorithms: ["HS256"],
         issuer: "shopease",
         audience: "shopease-users",
       }
@@ -46,7 +52,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     const users = rows as {
       id: number;
       email: string;
-      role: "user" | "admin";
+      role: UserRole;
     }[];
 
     if (users.length === 0) {
@@ -55,7 +61,14 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
     const user = users[0];
 
-    if (user.role !== "user" && user.role !== "admin") {
+    const validRoles: UserRole[] = [
+      "user",
+      "admin",
+      "owner_admin",
+      "employee_admin",
+    ];
+
+    if (!validRoles.includes(user.role)) {
       return null;
     }
 
@@ -82,11 +95,43 @@ export async function requireAdmin(): Promise<NextResponse | null> {
     );
   }
 
-  if (user.role !== "admin") {
+  const adminRoles: UserRole[] = [
+    "admin",
+    "owner_admin",
+    "employee_admin",
+  ];
+
+  if (!adminRoles.includes(user.role)) {
     return NextResponse.json(
       {
         success: false,
         message: "Forbidden. Admin access required.",
+      },
+      { status: 403 }
+    );
+  }
+
+  return null;
+}
+
+export async function requireOwnerAdmin(): Promise<NextResponse | null> {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Authentication required. Please log in.",
+      },
+      { status: 401 }
+    );
+  }
+
+  if (user.role !== "owner_admin") {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Forbidden. Owner admin access required.",
       },
       { status: 403 }
     );

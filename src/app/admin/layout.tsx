@@ -1,24 +1,27 @@
-
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 
 export const instant = false;
 
-interface AdminLayoutProps {
-  children: ReactNode;
-}
-
 export default async function AdminLayout({
   children,
-}: AdminLayoutProps) {
+}: {
+  children: ReactNode;
+}) {
   const user = await getCurrentUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  if (user.role !== "admin") {
+  const allowedRoles = [
+    "admin",
+    "owner_admin",
+    "employee_admin",
+  ];
+
+  if (!allowedRoles.includes(user.role)) {
     redirect("/products");
   }
 
